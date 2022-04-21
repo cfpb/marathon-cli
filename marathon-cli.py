@@ -13,6 +13,8 @@ TASK_STATUS_URL = "{}/tasks.json"
 STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"
 STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"
 OFFSET = "&offset={}&length={}"
+MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
+
 
 def get_task_by_version(client, app_id, version):
     """
@@ -29,6 +31,7 @@ def get_task_by_version(client, app_id, version):
     if not new_task:
         logging.debug("Failed to find task for version {}".format(version))
     return new_task
+
 
 def print_file_chunk(url, offset, auth):
     """
@@ -56,6 +59,91 @@ def print_file_chunk(url, offset, auth):
 
     return offset + length
 
+
+def get_marathon_json():
+    # assumes the following vars are delivered via Jenkins environment
+    FQDI = os.getenv("FQDI")
+    ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
+    DOCKER_USER = os.getenv("DOCKER_USER")
+    MESOS_MASTER_URLS = os.getenv("MESOS_MASTER_URLS")
+    MESOS_AGENT_MAP = os.getenv("MESOS_AGENT_MAP")
+    MARATHON_FORCE_DEPLOY = True
+    PYTHONWARNINGS = "ignore:Unverified HTTPS request"
+    ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
+    MARATHON_APP_ID = "/complaint-search/search-tool-staging"
+    ES_USERNAME = os.getenv("ES_USERNAME")
+    ES_PASSWORD = os.getenv("ES_PASSWORD")
+    LDAP_HOST = os.getenv("LDAP_HOST")
+    LDAP_USERNAME = os.getenv("LDAP_USERNAME")
+    LDAP_PASSWORD = os.getenv("LDAP_PASSWORD")
+    PG_USERNAME = os.getenv("PG_USERNAME")
+    PG_PASSWORD = os.getenv("PG_PASSWORD")
+    HOST_BULK = os.getenv("HOST_BULK")
+    data = {
+        "id": "f'{MARATHON_APP_ID}'",
+        "container": {
+            "docker": {
+                "image": "f'{FQDI}'",
+                "forcePullImage": True
+            },
+            "volumes": [
+                {
+                    "containerPath": "f'{ATTACHMENTS_ROOT}/mosaic'",
+                    "hostPath": "/home/dtwork/mosaic",
+                    "mode": "RO"
+                },
+                {
+                    "containerPath": "f'{ATTACHMENTS_ROOT}/rightnow'",
+                    "hostPath": "/home/dtwork/rightnow",
+                    "mode": "RO"
+                },
+                {
+                    "containerPath": "/etc/pki/ca-trust",
+                    "hostPath": "/etc/pki/ca-trust",
+                    "mode": "RO"
+                }
+            ],
+            "type": "MESOS"
+        },
+        "cmd": "/docker-entrypoint.sh",
+        "cpus": 2,
+        "mem": 8000,
+        "disk": 5000,
+        "instances": 2,
+        "user": "f'{DOCKER_USER}'",
+        "env": {
+            "ES_SERVER_ENV": "staging",
+            "DJANGO_SETTINGS_MODULE": "search_tool.mesos",
+            "ES_HOST": "https://es2.data.cfpb.local/",
+            "ES_INDEX_ATTACHMENT": "complaint-crdb-attachment-staging",
+            "ES_INDEX_COMPLAINT": "complaint-crdb-staging",
+            "ES_USERNAME": "f'{ES_USERNAME}'",
+            "ES_PASSWORD": "f'{ES_PASSWORD}'",
+            "LDAP_HOST": "f'{LDAP_HOST}'",
+            "LDAP_USERNAME": "f'{LDAP_USERNAME}'",
+            "LDAP_PASSWORD": "f'{LDAP_PASSWORD}'",
+            "LDAP_BASE_DN": "OU=CFPB Domain Users,DC=cfpb,DC=local",
+            "PGUSER": "f'{PG_USERNAME}'",
+            "STATIC_URL": "/static/",
+            "PGPASSWORD": "f'{PG_PASSWORD}'",
+            "HOST_BULK": "f'{HOST_BULK}'",
+        },
+        "healthChecks": [
+            {
+                "path": "/",
+                "protocol": "HTTP",
+                "portIndex": 0,
+                "gracePeriodSeconds": 600,
+                "intervalSeconds": 60,
+                "timeoutSeconds": 60,
+                "maxConsecutiveFailures": 3,
+                "ignoreHttp1xx": False
+            }
+        ]
+    }
+    return json.dumps(data)
+
+
 if __name__ == '__main__':
     """
     This script reads in values from environment variables, then deploys a
@@ -80,15 +168,20 @@ if __name__ == '__main__':
                                 separated by commas.
     """
 
+    marathon_app_id = MARATHON_APP_ID
     marathon_urls = os.getenv("MARATHON_URLS", "http://localhost:8080").split(',')
-    marathon_app_id = os.getenv("MARATHON_APP_ID", "test-app")
     marathon_user = os.getenv("MARATHON_USER", None)
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
     marathon_force = True if os.getenv("MARATHON_FORCE_DEPLOY", "false") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
     log_level = os.getenv("MARATHON_LOGLEVEL", 'info')
-    marathon_app = os.getenv("MARATHON_APP","""
+    if os.getenv("MARATHON_APP"):
+        # Jenkins is supplying env vars
+        marathon_app = get_marathon_json()
+    else:
+        # we fall back to default app json config
+        marathon_app = """
         {
             "id": "/test-app",
             "cmd": "mv *.war apache-tomcat-*/webapps && cd apache-tomcat-* && sed \\"s/8080/$PORT/g\\" < ./conf/server.xml > ./conf/server-mesos.xml && sleep 15 && ./bin/catalina.sh run -config ./conf/server-mesos.xml",
@@ -112,8 +205,7 @@ if __name__ == '__main__':
                   "maxConsecutiveFailures": 3
                 }
             ]
-        }
-    """)
+        }"""
     mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
     mesos_master_urls = os.getenv("MESOS_MASTER_URLS", "http://localhost:5050").split(',')
 
