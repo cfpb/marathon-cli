@@ -17,21 +17,25 @@ STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executo
 OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
 
+# Setup Logging
+logger = logging.getLogger('marathon')
+logger.setLevel(logging.INFO)
+
 
 def get_task_by_version(client, app_id, version):
     """
     Gets the Mesos task using the Marathon version of the deployment.
     """
-    logging.debug("Attempting to get task for app version {}".format(version))
+    logger.debug("Attempting to get task for app version {}".format(version))
     tasks = client.list_tasks(app_id=marathon_app_id)
     new_task = None
     for task in tasks:
-        logging.debug("Found task: {}".format(task))
+        logger.debug("Found task: {}".format(task))
         if task.version == version:
-            logging.debug("Task with version {} found!".format(version))
+            logger.debug("Task with version {} found!".format(version))
             new_task = task
     if not new_task:
-        logging.debug("Failed to find task for version {}".format(version))
+        logger.debug("Failed to find task for version {}".format(version))
     return new_task
 
 
@@ -44,7 +48,7 @@ def print_file_chunk(url, offset, auth):
     try:
         length = response.json()['offset'] - offset
     except ValueError:
-        logging.debug(
+        logger.debug(
             "Invalid JSON response received: "
             f"{response} from URL {url}, skipping..."
         )
@@ -55,7 +59,7 @@ def print_file_chunk(url, offset, auth):
     try:
         data = response.json()['data']
     except ValueError:
-        logging.debug(
+        logger.debug(
             "Invalid JSON response received: "
             f"{response} from URL {url}, skipping..."
         )
@@ -63,7 +67,7 @@ def print_file_chunk(url, offset, auth):
     
     if data != "":
         for line in data.split('\n')[:-1]:
-            logging.info("CONTAINER LOG: {}".format(line))
+            logger.info("CONTAINER LOG: {}".format(line))
 
     return offset + length
 
@@ -195,7 +199,6 @@ if __name__ == '__main__':
         "MARATHON_FORCE_DEPLOY", "false") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
-    log_level = os.getenv("MARATHON_LOGLEVEL", 'info')
     if os.getenv("MARATHON_JENKINS"):
         # Jenkins is supplying env vars
         marathon_app = get_marathon_json()
@@ -226,32 +229,23 @@ if __name__ == '__main__':
                 }
             ]
         }"""
+    pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
+    print("marathon json config:")
+    pp.pprint(json.loads(marathon_app))
+
+    app_definition = MarathonApp.from_json(json.loads(marathon_app))
+
     mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
     mesos_master_urls = os.getenv(
         "MESOS_MASTER_URLS", "http://localhost:5050").split(',')
-
-    pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
 
     exit_code = 0
     auth = None
     if marathon_user and marathon_password:
         auth = (marathon_user, marathon_password)
 
-    # Setup Logging
-    logging.basicConfig(
-        format="%(levelname)-8s %(message)s",
-        level=getattr(logging, log_level.upper())
-    )
-    logging.getLogger('marathon').setLevel(logging.WARN)  # INFO is too chatty
-
-    logging.warn("Parsing this JSON app definition")
-    logging.warn(
-        pp.pprint(json.loads(marathon_app))
-    )
-    app_definition = MarathonApp.from_json(json.loads(marathon_app))
-
     try:
-        logging.info("Connecting to Marathon...")
+        logger.info("Connecting to Marathon...")
         client = MarathonClient(
             marathon_urls,
             username=marathon_user,
@@ -259,11 +253,11 @@ if __name__ == '__main__':
             verify=False
         )
     except MarathonError as e:
-        logging.error("Failed to connect to Marathon! {}".format(e))
+        logger.error("Failed to connect to Marathon! {}".format(e))
         exit_code = 1
         sys.exit(exit_code)
 
-    logging.info("Deploying application...")
+    logger.info("Deploying application...")
     try:
         app = client.get_app(marathon_app_id)
     except MarathonHttpError:
@@ -279,10 +273,10 @@ if __name__ == '__main__':
         version = response['version']
         deployment_id = response['deploymentId']
 
-    logging.info("New version deployed: {}".format(version))
+    logger.info("New version deployed: {}".format(version))
 
     if app_definition.instances == 0:
-        logging.info(
+        logger.info(
             "Deactivated application by setting instances "
             "to 0, deployment complete."
         )
@@ -295,7 +289,7 @@ if __name__ == '__main__':
     new_task = get_task_by_version(client, marathon_app_id, version)
 
     if not new_task:
-        logging.warn(
+        logger.warning(
             "New task did not start automatically, probably because "
             "the application definition did not change, forcing restart..."
         )
@@ -314,14 +308,14 @@ if __name__ == '__main__':
                     headers=headers
                 )
             except requests.exceptions.ConnectionError as e:
-                logging.warn(
+                logger.warning(
                     "Marathon connection error, ignoring: {}".format(e))
                 pass
             else:
                 break
 
         if response.status_code != 200:
-            logging.error(
+            logger.error(
                 "Failed to force application restart, "
                 "received response {}, exiting...".format(response.text)
             )
@@ -337,7 +331,7 @@ if __name__ == '__main__':
             attempts += 1
 
         if not new_task:
-            logging.error(
+            logger.error(
                 "Unable to retrieve new task from Marathon, "
                 "there may be a communication failure with Mesos."
             )
@@ -345,7 +339,7 @@ if __name__ == '__main__':
             sys.exit(exit_code)
 
         deployment_id = response.json()["deploymentId"]
-        logging.info(
+        logger.info(
             f"New version created by restart: {response.json()['version']}"
         )
 
@@ -365,7 +359,7 @@ if __name__ == '__main__':
     else:
         agent_hostname = "http://{}:5051".format(agent_hostname)
 
-    logging.info(
+    logger.info(
         f'SSH command: ssh -t {new_task.host} '
         f'"cd /opt/mesos/slaves/*/frameworks/*/executors/{new_task.id}/runs/latest; exec \\$SHELL -l"'  # noqa
     )
@@ -380,8 +374,8 @@ if __name__ == '__main__':
     try:
         mesos_tasks = mesos_tasks.json()
     except ValueError as e:
-        logging.error("Error {} from response {}".format(e, mesos_tasks.text))
-        logging.error(
+        logger.error("Error {} from response {}".format(e, mesos_tasks.text))
+        logger.error(
             "Deployment may have started, but cannot confirm with Mesos."
         )
         exit_code = 1
@@ -393,7 +387,7 @@ if __name__ == '__main__':
             break
 
     if not marathon_framework:
-        logging.error("Marathon Framework not discoverable via Mesos API.")
+        logger.error("Marathon Framework not discoverable via Mesos API.")
 
     for executor in framework['executors']:
         if executor['source'] == new_task.id:
@@ -401,10 +395,10 @@ if __name__ == '__main__':
             break
 
     if not container_id:
-        logging.error("Executor for task {} not found.".format(new_task.id))
+        logger.error("Executor for task {} not found.".format(new_task.id))
 
     # Stream STDOUT and STDERR from Mesos until the deployment has completed
-    logging.info("Streaming logs from Mesos...\n")
+    logger.info("Streaming logs from Mesos...\n")
 
     attempts = 0
 
@@ -421,15 +415,15 @@ if __name__ == '__main__':
             deployments = client.get_app(marathon_app_id).deployments
 
             if deployments == []:
-                logging.debug("No deployments remaining, set done=True.")
+                logger.debug("No deployments remaining, set done=True.")
                 time.sleep(3)
                 done = True
             else:
                 mesos_tasks = None
-                logging.debug("Getting Mesos task state...")
+                logger.debug("Getting Mesos task state...")
 
                 for host in mesos_master_urls:
-                    logging.debug("Trying Mesos host {}...".format(host))
+                    logger.debug("Trying Mesos host {}...".format(host))
                     try:
                         response = requests.get(
                             TASK_STATUS_URL.format(host),
@@ -438,13 +432,13 @@ if __name__ == '__main__':
                             timeout=1
                         )
                     except requests.exceptions.ConnectionError:
-                        logging.debug(
+                        logger.debug(
                             f"Failed to connect to Mesos host {host}, "
                             "trying next host..."
                         )
                         continue
                     except requests.exceptions.ReadTimeout:
-                        logging.debug(
+                        logger.debug(
                             f"Read timeout from Mesos host {host}, "
                             "trying next host..."
                         )
@@ -454,7 +448,7 @@ if __name__ == '__main__':
                         mesos_tasks = response.json()
                         break
                     else:
-                        logging.warn(
+                        logger.warning(
                             "Response code != 200: {}".format(
                                 pp.pprint(response))
                         )
@@ -468,14 +462,14 @@ if __name__ == '__main__':
                                 "TASK_KILLED",
                                 "TASK_FINISHED"
                             ]:
-                                logging.warn(
+                                logger.warning(
                                     "task failed: {}".format(pp.pprint(task))
                                 )
                                 failed = True
                                 done = True
 
                 else:
-                    logging.warn(
+                    logger.warning(
                         "Failed to connect to Mesos API, "
                         "task status not available."
                     )
@@ -506,7 +500,7 @@ if __name__ == '__main__':
             time.sleep(0.1)
 
         if failed:
-            logging.warn("Deployment task failed, trying again...")
+            logger.warning("Deployment task failed, trying again...")
             attempts += 1
         else:
             break
@@ -516,10 +510,10 @@ if __name__ == '__main__':
     # Wait for logs to print
     time.sleep(5)
 
-    logging.info("End of log stream from Mesos.")
+    logger.info("End of log stream from Mesos.")
 
     if failed:
-        logging.error(
+        logger.error(
             "Failure deploying new app configuration, aborting deployment!"
         )
         for hostname in marathon_urls:
@@ -532,16 +526,16 @@ if __name__ == '__main__':
                     headers=headers
                 )
             except requests.exceptions.ConnectionError as e:
-                logging.warn(
+                logger.warn(
                     "Marathon connection error, ignoring: {}".format(e))
                 pass
             else:
                 break
 
         if response.status_code in [200, 202]:
-            logging.warn("Successfully cancelled failed deployment.")
+            logger.warn("Successfully cancelled failed deployment.")
         else:
-            logging.error(
+            logger.error(
                 f"Failed to force stop deployment: {response.text}, "
                 "you may need to try again with MARATHON_FORCE_DEPLOY=true, "
                 "exiting..."
@@ -549,5 +543,5 @@ if __name__ == '__main__':
 
         exit_code = 1
     else:
-        logging.info("All deployments completed sucessfully!")
+        logger.info("All deployments completed sucessfully!")
     sys.exit(exit_code)
