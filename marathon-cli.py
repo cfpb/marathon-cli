@@ -209,7 +209,7 @@ if __name__ == '__main__':
     mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
     mesos_master_urls = os.getenv("MESOS_MASTER_URLS", "http://localhost:5050").split(',')
 
-    pp = pprint.PrettyPrinter(depth=2)
+    pp = pprint.PrettyPrinter(depth=2, width=120)
 
     exit_code = 0
     auth = None
@@ -220,7 +220,8 @@ if __name__ == '__main__':
     logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
     logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
 
-    logging.info("Parsing JSON app definition...")
+    logging.warn("Parsing this JSON app definition")
+    logging.warn(pp.pprint(marathon_app))
     app_definition = MarathonApp.from_json(json.loads(marathon_app))
 
     try:
