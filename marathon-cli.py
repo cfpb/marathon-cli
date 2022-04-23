@@ -147,6 +147,8 @@ def get_marathon_json():
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
             "STATIC_URL": "/static/",
             "HOST_BULK": os.getenv("HOST_BULK"),
+            "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID"),  # ECR keys
+            "AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY"),
         },
         "healthChecks": [
             {
