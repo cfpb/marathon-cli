@@ -75,7 +75,7 @@ def print_file_chunk(url, offset, auth):
 def get_marathon_json():
     """
     Return the json configuration for the Mesos app.
-    Assumes a Jenkins job is providing the following vars, some sensitive:
+    Assumes a Jenkins job is providing the following vars:
 
     VAR   | example
     :---- | :--------
@@ -95,7 +95,8 @@ def get_marathon_json():
     PG_USERNAME           | (sensitive)
     PG_PASSWORD           | (sensitive)
     HOST_BULK             | (sensitive)
-    
+    AWS_ACCESS_KEY_ID     | (for ECR)
+    AWS_SECRET_ACCESS_KEY | (for ECR)
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
 
@@ -147,7 +148,7 @@ def get_marathon_json():
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
             "STATIC_URL": "/static/",
             "HOST_BULK": os.getenv("HOST_BULK"),
-            "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID"),  # ECR keys
+            "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID"),
             "AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY"),
         },
         "healthChecks": [
@@ -198,7 +199,7 @@ if __name__ == '__main__':
     marathon_user = os.getenv("MARATHON_USER", None)
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
     marathon_force = True if os.getenv(
-        "MARATHON_FORCE_DEPLOY", "false") == "true" else False
+        "MARATHON_FORCE_DEPLOY") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
     if os.getenv("MARATHON_JENKINS"):
