@@ -202,9 +202,12 @@ if __name__ == '__main__':
         "MARATHON_FORCE_DEPLOY") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
-    if os.getenv("MARATHON_JENKINS"):
-        # Jenkins is supplying env vars
+    if os.getenv("MARATHON_VARS_ONLY"):
+        # Jenkins is providing env vars only, not a full json structure
         marathon_app = get_marathon_json()
+    elif os.getenv("MARATHON_APP"):
+        # Jenkins is providing a full json structure via env var
+        marathon_app = os.getenv("MARATHON_APP")
     else:
         # we fall back to default app json config
         marathon_app = """
