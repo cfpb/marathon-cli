@@ -271,6 +271,7 @@ if __name__ == '__main__':
         version = response.version
         depolyment_id = response.deployments[0].id
     else:
+        client.list_apps()
         response = client.update_app(
             marathon_app_id,
             app_definition,
