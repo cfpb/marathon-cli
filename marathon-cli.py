@@ -18,8 +18,8 @@ OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
 
 # Setup Logging
-logger = logging.getLogger('marathon')
-logger.setLevel(logging.INFO)
+logger = logging.getLogger('marathon-cli')
+logger.setLevel(logging.DEBUG)
 
 
 def get_task_by_version(client, app_id, version):
