@@ -100,7 +100,7 @@ def get_marathon_json():
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
 
-    app_data = {
+    app_config = {
         "id": MARATHON_APP_ID,
         "container": {
             "docker": {
@@ -164,7 +164,7 @@ def get_marathon_json():
             }
         ]
     }
-    return json.dumps(app_data, indent=2)
+    return json.dumps(app_config, indent=2)
 
 
 if __name__ == '__main__':
@@ -270,7 +270,7 @@ if __name__ == '__main__':
         version = response.version
         depolyment_id = response.deployments[0].id
     else:
-        client.list_apps()
+        logger.info(f"Apps list: {client.list_apps()}")
         response = client.update_app(
             marathon_app_id,
             app_definition,
