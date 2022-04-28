@@ -145,6 +145,12 @@ def get_marathon_json():
         "mem": 8000,
         "disk": 5000,
         "instances": 2,
+        "fetcher_cache_size": 0,
+        "fetch": [
+            {
+                "uri": None
+            }
+        ],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
             "ES_SERVER_ENV": "staging",
