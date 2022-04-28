@@ -20,7 +20,7 @@ MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
 logger = logging.getLogger('marathon-cli')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
 pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
