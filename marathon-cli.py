@@ -105,7 +105,7 @@ def get_marathon_json():
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "forcePullImage": True
+                "forcePullImage": False
             },
             "volumes": [
                 {
