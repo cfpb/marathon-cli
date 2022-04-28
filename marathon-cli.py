@@ -83,7 +83,7 @@ def get_marathon_json():
 
     VAR   | example
     :---- | :--------
-    MARATHON_JENKINS      | true (flag that Jenkins is delivering these vars)
+    MARATHON_VARS_ONLY    | true (Jenkins is delivering vars, not json)
     MARATHON_FORCE_DEPLOY | true
     MARATHON_APP_ID       | "/complaint-search/search-tool-staging" 
     ATTACHMENTS_ROOT      | "/home/dtwork/"
@@ -273,7 +273,7 @@ if __name__ == '__main__':
         version = response.version
         depolyment_id = response.deployments[0].id
     else:
-        logger.info(f"Apps list: {client.list_apps()}")
+        # logger.info(f"Apps list: {pp.pprint(client.list_apps())}")
         response = client.update_app(
             marathon_app_id,
             app_definition,
