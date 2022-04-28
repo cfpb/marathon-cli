@@ -17,9 +17,13 @@ STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executo
 OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
 
-# Setup Logging
 logger = logging.getLogger('marathon-cli')
 logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+logger.addHandler(ch)
+
+pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
 
 
 def get_task_by_version(client, app_id, version):
@@ -234,7 +238,6 @@ if __name__ == '__main__':
                 }
             ]
         }"""
-    pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
     print("marathon json config:")
     pp.pprint(json.loads(marathon_app))
 
