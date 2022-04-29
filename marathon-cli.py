@@ -147,7 +147,7 @@ def get_marathon_json():
         "instances": 2,
         "fetch": [
             {
-                "uri": None
+                "uri": ""
             }
         ],
         "user": f'{os.getenv("DOCKER_USER")}',
