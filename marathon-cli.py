@@ -214,7 +214,16 @@ if __name__ == '__main__':
     marathon_force = True  # if os.getenv("MARATHON_FORCE_DEPLOY") == "true" else False
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
-    if os.getenv("MARATHON_VARS_ONLY"):
+    if os.getenv("APP_STOP"):
+        # A simple request to stop the containers to prep for a deployment
+        marathon_app = """
+        {
+          "id": "f'{MARATHON_APP_ID}'",
+          "instances": 0,
+          "user": "root"
+        }
+        """
+    elif os.getenv("MARATHON_VARS_ONLY"):
         # Jenkins is providing env vars only, not a full json structure
         marathon_app = get_marathon_json()
     elif os.getenv("MARATHON_APP"):
