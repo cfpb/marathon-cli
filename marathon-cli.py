@@ -18,7 +18,7 @@ OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
 
 logger = logging.getLogger('marathon-cli')
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
@@ -145,7 +145,7 @@ def get_marathon_json():
         "mem": 8000,
         "disk": 5000,
         "instances": 2,
-        "uris": ["https://www.consumerfinance.gov//static/favicon.ccb3dcabd67e.ico"],
+        "uris": [],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
             "ES_SERVER_ENV": "staging",
@@ -163,8 +163,6 @@ def get_marathon_json():
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
             "STATIC_URL": "/static/",
             "HOST_BULK": os.getenv("HOST_BULK"),
-            "AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID"),
-            "AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY"),
         },
         "healthChecks": [
             {
@@ -284,7 +282,6 @@ if __name__ == '__main__':
         version = response.version
         depolyment_id = response.deployments[0].id
     else:
-        # logger.info(f"Apps list: {pp.pprint(client.list_apps())}")
         response = client.update_app(
             marathon_app_id,
             app_definition,
