@@ -145,7 +145,9 @@ def get_marathon_json():
         "mem": 8000,
         "disk": 5000,
         "instances": 2,
-        "uris": [],
+        "uris": [
+            "https://www.consumerfinance.gov//static/favicon.ccb3dcabd67e.ico"
+        ],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
             "ES_SERVER_ENV": "staging",
@@ -211,7 +213,7 @@ if __name__ == '__main__':
         "MARATHON_URLS", "http://localhost:8080").split(',')
     marathon_user = os.getenv("MARATHON_USER", None)
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
-    marathon_force = True  # if os.getenv("MARATHON_FORCE_DEPLOY") == "true" else False
+    marathon_force = True
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
     if os.getenv("APP_STOP"):
@@ -231,7 +233,7 @@ if __name__ == '__main__':
         marathon_app = os.getenv("MARATHON_APP")
     else:
         # we fall back to default app json config
-        marathon_app = """
+        marathon_app = """  # noqa
         {
             "id": "/test-app",
             "cmd": "mv *.war apache-tomcat-*/webapps && cd apache-tomcat-* && sed \\"s/8080/$PORT/g\\" < ./conf/server.xml > ./conf/server-mesos.xml && sleep 15 && ./bin/catalina.sh run -config ./conf/server-mesos.xml",
