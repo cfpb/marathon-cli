@@ -123,7 +123,7 @@ def get_marathon_json():
             "pullConfigSecret": {
                 "source": docker_auth
             }
-        }
+        },
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
