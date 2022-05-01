@@ -4,6 +4,7 @@ import json
 import time
 import logging
 import pprint
+from io import BytesIO
 
 import requests
 
@@ -116,12 +117,13 @@ def get_marathon_json():
             }
         }
     }
+    docker_auth_file = BytesIO(json.dumps(docker_auth))
 
     app_config = {
         "id": MARATHON_APP_ID,
         "secrets": {
             "pullConfigSecret": {
-                "source": json.dumps(docker_auth)
+                "source": docker_auth_file
             }
         },
         "container": {
