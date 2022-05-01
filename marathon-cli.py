@@ -108,15 +108,28 @@ def get_marathon_json():
         f"{ATTACHMENTS_ROOT}/applications/similarity"
     )
 
+    docker_auth = {
+        "auths": {
+            "https://795649122172.dkr.ecr.us-east-1.amazonaws.com": {
+                "username": "AWS",
+                "password": os.getenv("ECRPW")
+            }
+        }
+    }
+
     app_config = {
         "id": MARATHON_APP_ID,
+        "secrets": {
+            "pullConfigSecret": {
+                "source": docker_auth
+            }
+        }
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "credential": {
-                    "username": "AWS",
-                    "password": os.getenv('ECRPW')
-                }
+                "pullConfig": {
+                    "secret": "pullConfigSecret"
+                } 
             },
             "volumes": [
                 {
