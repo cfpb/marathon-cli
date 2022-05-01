@@ -100,8 +100,7 @@ def get_marathon_json():
     PG_USERNAME           | (sensitive)
     PG_PASSWORD           | (sensitive)
     HOST_BULK             | (sensitive)
-    AWS_ACCESS_KEY_ID     | (for ECR)
-    AWS_SECRET_ACCESS_KEY | (for ECR)
+    ECRPW                 | (sensitive)
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv(
@@ -114,7 +113,10 @@ def get_marathon_json():
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "forcePullImage": False
+                "pullConfig": {
+                    "username": "AWS",
+                    "password": os.getenv('ECRPW')
+                }
             },
             "volumes": [
                 {
