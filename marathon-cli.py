@@ -113,7 +113,7 @@ def get_marathon_json():
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "pullConfig": {
+                "credential": {
                     "username": "AWS",
                     "password": os.getenv('ECRPW')
                 }
