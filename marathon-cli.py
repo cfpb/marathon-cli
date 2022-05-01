@@ -145,9 +145,7 @@ def get_marathon_json():
         "mem": 8000,
         "disk": 5000,
         "instances": 2,
-        "uris": [
-            "https://www.consumerfinance.gov//static/favicon.ccb3dcabd67e.ico"
-        ],
+        "uris": [],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
             "ES_SERVER_ENV": "staging",
