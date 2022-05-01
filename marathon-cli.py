@@ -23,7 +23,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-pp = pprint.PrettyPrinter(indent=2, width=120, depth=4)
+pp = pprint.PrettyPrinter(indent=2, width=120, depth=6)
 
 
 def get_task_by_version(client, app_id, version):
@@ -121,7 +121,7 @@ def get_marathon_json():
         "id": MARATHON_APP_ID,
         "secrets": {
             "pullConfigSecret": {
-                "source": docker_auth
+                "source": json.loads(docker_auth)
             }
         },
         "container": {
