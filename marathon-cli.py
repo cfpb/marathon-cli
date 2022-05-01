@@ -121,7 +121,7 @@ def get_marathon_json():
         "id": MARATHON_APP_ID,
         "secrets": {
             "pullConfigSecret": {
-                "source": json.loads(docker_auth)
+                "source": json.dumps(docker_auth)
             }
         },
         "container": {
