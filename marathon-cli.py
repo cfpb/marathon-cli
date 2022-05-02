@@ -4,7 +4,6 @@ import json
 import time
 import logging
 import pprint
-from io import StringIO
 
 import requests
 
@@ -101,7 +100,7 @@ def get_marathon_json():
     PG_USERNAME           | (sensitive)
     PG_PASSWORD           | (sensitive)
     HOST_BULK             | (sensitive)
-    ECRPW                 | (sensitive)
+    DOCKER_CONFIG_FILE    | (sensitive)
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv(
@@ -109,21 +108,20 @@ def get_marathon_json():
         f"{ATTACHMENTS_ROOT}/applications/similarity"
     )
 
-    docker_auth = {
-        "auths": {
-            "https://795649122172.dkr.ecr.us-east-1.amazonaws.com": {
-                "username": "AWS",
-                "password": os.getenv("ECRPW")
-            }
-        }
-    }
-    docker_auth_file = StringIO(json.dumps(docker_auth))
+    # docker_auth = {
+    #     "auths": {
+    #         "https://795649122172.dkr.ecr.us-east-1.amazonaws.com": {
+    #             "username": "AWS",
+    #             "password": os.getenv("ECRPW")
+    #         }
+    #     }
+    # }
 
     app_config = {
         "id": MARATHON_APP_ID,
         "secrets": {
             "pullConfigSecret": {
-                "source": docker_auth_file
+                "source": os.getenv("DOCKER_CONFIG_FILE")
             }
         },
         "container": {
