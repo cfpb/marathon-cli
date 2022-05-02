@@ -119,17 +119,10 @@ def get_marathon_json():
 
     app_config = {
         "id": MARATHON_APP_ID,
-        "secrets": {
-            "pullConfigSecret": {
-                "source": os.getenv("DOCKER_CONFIG_FILE")
-            }
-        },
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "pullConfig": {
-                    "secret": "pullConfigSecret"
-                } 
+                "forcePullImage": False
             },
             "volumes": [
                 {
