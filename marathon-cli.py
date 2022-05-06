@@ -79,28 +79,27 @@ def print_file_chunk(url, offset, auth):
 def get_marathon_json():
     """
     Return the json configuration for the Mesos app.
+
     Assumes a Jenkins job is providing the following vars:
 
-    VAR   | example
-    :---- | :--------
-    MARATHON_VARS_ONLY    | true (Jenkins is delivering vars, not json)
-    MARATHON_FORCE_DEPLOY | true
-    MARATHON_APP_ID       | "/complaint-search/search-tool-staging" 
-    MLT_ROOT              | "/home/dtwork/applications/similarity"
-    ATTACHMENTS_ROOT      | "/home/dtwork/"
-    DOCKER_USER           | (sensitive)
-    MESOS_MASTER_URLS     | (sensitive)
-    MESOS_AGENT_MAP       | (sensitive)
-    ES_USERNAME           | (sensitive)
-    ES_PASSWORD           | (sensitive)
-    LDAP_HOST             | (sensitive)
-    LDAP_USERNAME         | (sensitive)
-    LDAP_PASSWORD         | (sensitive)
-    LDAP_BASE_DN          | (sensitive)
-    PG_USERNAME           | (sensitive)
-    PG_PASSWORD           | (sensitive)
-    HOST_BULK             | (sensitive)
-    DOCKER_CONFIG_FILE    | (sensitive)
+    VAR                 | example
+    :----               | :--------
+    MARATHON_VARS_ONLY  | true (Jenkins is delivering vars, not json)
+    MARATHON_APP_ID     | "/complaint-search/search-tool-staging" 
+    MLT_ROOT            | "/home/dtwork/applications/similarity"
+    ATTACHMENTS_ROOT    | "/home/dtwork/"
+    DOCKER_USER         | (sensitive)
+    MESOS_MASTER_URLS   | (sensitive)
+    MESOS_AGENT_MAP     | (sensitive)
+    ES_USERNAME         | (sensitive)
+    ES_PASSWORD         | (sensitive)
+    LDAP_HOST           | (sensitive)
+    LDAP_USERNAME       | (sensitive)
+    LDAP_PASSWORD       | (sensitive)
+    LDAP_BASE_DN        | (sensitive)
+    PG_USERNAME         | (sensitive)
+    PG_PASSWORD         | (sensitive)
+    HOST_BULK           | (sensitive)
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv(
@@ -108,21 +107,12 @@ def get_marathon_json():
         f"{ATTACHMENTS_ROOT}/applications/similarity"
     )
 
-    # docker_auth = {
-    #     "auths": {
-    #         "https://795649122172.dkr.ecr.us-east-1.amazonaws.com": {
-    #             "username": "AWS",
-    #             "password": os.getenv("ECRPW")
-    #         }
-    #     }
-    # }
-
     app_config = {
         "id": MARATHON_APP_ID,
         "container": {
             "docker": {
                 "image": os.getenv("FQDI"),
-                "forcePullImage": False
+                "forcePullImage": True
             },
             "volumes": [
                 {
@@ -177,13 +167,10 @@ def get_marathon_json():
                 "path": "/",
                 "protocol": "HTTP",
                 "portIndex": 0,
-                # "gracePeriodSeconds": 600,
-                # "intervalSeconds": 60,
-                # "timeoutSeconds": 60,
-                "gracePeriodSeconds": 1200,
-                "intervalSeconds": 120,
-                "timeoutSeconds": 120,
-                "maxConsecutiveFailures": 6,
+                "gracePeriodSeconds": 600,
+                "intervalSeconds": 60,
+                "timeoutSeconds": 60,
+                "maxConsecutiveFailures": 3,
                 "ignoreHttp1xx": False
             }
         ]
@@ -206,10 +193,10 @@ if __name__ == '__main__':
     MARATHON_FORCE_DEPLOY:      Use the Force, if necessary (i.e. when a
                                 deployment is failing.)
     MARATHON_FRAMEWORK_NAME:    The name of the framework (usually 'marathon')
-    MARATHON_APP:               The JSON formatted app definition.
+    MARATHON_APP:               The JSON app definition, used in legacy jobs
     MARATHON_RETRIES:           The number of task failures to tolerate.
-    MESOS_AGENT_MAP:            This is used when Mesos is behind a proxy.  The
-                                API will return the Mesos Agent IP address,
+    MESOS_AGENT_MAP:            This is used when Mesos is behind a proxy.
+                                The API will return the Mesos Agent IP address,
                                 but that may need to be mapped to a URL.  The
                                 map is defined like:
                                 10.0.1.34|https://mesos.test.dev,...
@@ -226,7 +213,7 @@ if __name__ == '__main__':
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
     if os.getenv("APP_STOP"):
-        # A simple request to stop the containers to prep for a deployment
+        # A simple request to stop the containers by 'scaling' to 0
         marathon_app = """
         {
           "id": "f'{MARATHON_APP_ID}'",
@@ -238,10 +225,10 @@ if __name__ == '__main__':
         # Jenkins is providing env vars only, not a full json structure
         marathon_app = get_marathon_json()
     elif os.getenv("MARATHON_APP"):
-        # Jenkins is providing a full json structure via env var
+        # A legacy Jenkins job is sending a full json structure via an env var
         marathon_app = os.getenv("MARATHON_APP")
     else:
-        # we fall back to default app json config
+        # we fall back to a test json config
         marathon_app = """  # noqa
         {
             "id": "/test-app",
