@@ -183,7 +183,7 @@ def get_marathon_json():
                 "gracePeriodSeconds": 1200,
                 "intervalSeconds": 120,
                 "timeoutSeconds": 120,
-                "maxConsecutiveFailures": 3,
+                "maxConsecutiveFailures": 6,
                 "ignoreHttp1xx": False
             }
         ]
