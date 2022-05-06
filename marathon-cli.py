@@ -177,9 +177,12 @@ def get_marathon_json():
                 "path": "/",
                 "protocol": "HTTP",
                 "portIndex": 0,
-                "gracePeriodSeconds": 600,
-                "intervalSeconds": 60,
-                "timeoutSeconds": 60,
+                # "gracePeriodSeconds": 600,
+                # "intervalSeconds": 60,
+                # "timeoutSeconds": 60,
+                "gracePeriodSeconds": 1200,
+                "intervalSeconds": 120,
+                "timeoutSeconds": 120,
                 "maxConsecutiveFailures": 3,
                 "ignoreHttp1xx": False
             }
