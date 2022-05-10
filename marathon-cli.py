@@ -82,24 +82,33 @@ def get_marathon_json():
 
     Assumes a Jenkins job is providing the following vars:
 
-    VAR                 | example
-    :----               | :--------
-    MARATHON_VARS_ONLY  | true (Jenkins is delivering vars, not json)
-    MARATHON_APP_ID     | "/complaint-search/search-tool-staging" 
-    MLT_ROOT            | "/home/dtwork/applications/similarity"
-    ATTACHMENTS_ROOT    | "/home/dtwork/"
-    DOCKER_USER         | (sensitive)
-    MESOS_MASTER_URLS   | (sensitive)
-    MESOS_AGENT_MAP     | (sensitive)
-    ES_USERNAME         | (sensitive)
-    ES_PASSWORD         | (sensitive)
-    LDAP_HOST           | (sensitive)
-    LDAP_USERNAME       | (sensitive)
-    LDAP_PASSWORD       | (sensitive)
-    LDAP_BASE_DN        | (sensitive)
-    PG_USERNAME         | (sensitive)
-    PG_PASSWORD         | (sensitive)
-    HOST_BULK           | (sensitive)
+    VAR                    | example
+    :----                  | :--------
+    MARATHON_VARS_ONLY     | true (Jenkins is delivering vars, not json)
+    MARATHON_APP_ID        | "/complaint-search/search-tool-staging" 
+    MLT_ROOT               | "/home/dtwork/applications/similarity"
+    ATTACHMENTS_ROOT       | "/home/dtwork/"
+    DOCKER_USER            | (sensitive)
+    MESOS_MASTER_URLS      | (sensitive)
+    MESOS_AGENT_MAP        | (sensitive)
+    ES_USERNAME            | (sensitive)
+    ES_PASSWORD            | (sensitive)
+    LDAP_HOST              | (sensitive)
+    LDAP_USERNAME          | (sensitive)
+    LDAP_PASSWORD          | (sensitive)
+    LDAP_BASE_DN           | (sensitive)
+    PG_USERNAME            | (sensitive)
+    PG_PASSWORD            | (sensitive)
+    HOST_BULK              | (sensitive)
+    ES_SERVER_ENV          | staging
+    DJANGO_SETTINGS_MODULE | search_tool.mesos
+    ES_HOST                | (sensitive)
+    ES_INDEX_ATTACHMENT    | complaint-crdb-attachment-staging
+    ES_INDEX_COMPLAINT     | complaint-crdb-staging
+
+
+
+
     """
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv(
@@ -146,11 +155,11 @@ def get_marathon_json():
         "uris": [],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
-            "ES_SERVER_ENV": "staging",
-            "DJANGO_SETTINGS_MODULE": "search_tool.mesos",
-            "ES_HOST": "https://es2.data.cfpb.local/",
-            "ES_INDEX_ATTACHMENT": "complaint-crdb-attachment-staging",
-            "ES_INDEX_COMPLAINT": "complaint-crdb-staging",
+            "ES_SERVER_ENV": os.getenv("ES_SERVER_ENV"),
+            "DJANGO_SETTINGS_MODULE": os.getenv("DJANGO_SETTINGS_MODULE"),
+            "ES_HOST": os.getenv("ES_HOST"),
+            "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
+            "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
             "ES_USERNAME": os.getenv("ES_USERNAME"),
             "ES_PASSWORD": os.getenv("ES_PASSWORD"),
             "LDAP_HOST": os.getenv("LDAP_HOST"),
@@ -159,7 +168,6 @@ def get_marathon_json():
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
             "PGUSER": os.getenv("PG_USERNAME"),
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
-            "STATIC_URL": "/static/",
             "HOST_BULK": os.getenv("HOST_BULK"),
         },
         "healthChecks": [
