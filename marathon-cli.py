@@ -105,11 +105,8 @@ def get_marathon_json():
     ES_HOST                | (sensitive)
     ES_INDEX_ATTACHMENT    | complaint-crdb-attachment-staging
     ES_INDEX_COMPLAINT     | complaint-crdb-staging
-
-
-
-
     """
+
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv(
         "MLT_ROOT",
@@ -155,9 +152,11 @@ def get_marathon_json():
         "uris": [],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
-            "ES_SERVER_ENV": os.getenv("ES_SERVER_ENV"),
-            "DJANGO_SETTINGS_MODULE": os.getenv("DJANGO_SETTINGS_MODULE"),
-            "ES_HOST": os.getenv("ES_HOST"),
+            "ES_SERVER_ENV": os.getenv("ES_SERVER_ENV", "staging"),
+            "DJANGO_SETTINGS_MODULE": os.getenv(
+                "DJANGO_SETTINGS_MODULE", "search_tool.mesos"
+            ),
+            "ES_HOST": os.getenv("ES_HOST", ""),
             "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
             "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
             "ES_USERNAME": os.getenv("ES_USERNAME"),
