@@ -2,33 +2,46 @@ import os
 import sys
 import json
 import time
-import requests
 import logging
 import pprint
 
-from marathon import (MarathonClient, MarathonApp, MarathonHttpError,
-                      MarathonError)
+import requests
+
+from marathon import (
+    MarathonApp, MarathonClient, MarathonError, MarathonHttpError
+)
 
 TASK_STATUS_URL = "{}/tasks.json"
-STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"
-STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"
+STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stdout"  # noqa
+STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"  # noqa
 OFFSET = "&offset={}&length={}"
+MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
+
+logger = logging.getLogger('marathon-cli')
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+logger.addHandler(ch)
+
+pp = pprint.PrettyPrinter(indent=2, width=120, depth=6)
+
 
 def get_task_by_version(client, app_id, version):
     """
     Gets the Mesos task using the Marathon version of the deployment.
     """
-    logging.debug("Attempting to get task for app version {}".format(version))
+    logger.debug("Attempting to get task for app version {}".format(version))
     tasks = client.list_tasks(app_id=marathon_app_id)
     new_task = None
     for task in tasks:
-        logging.debug("Found task: {}".format(task))
+        logger.debug("Found task: {}".format(task))
         if task.version == version:
-            logging.debug("Task with version {} found!".format(version))
+            logger.debug("Task with version {} found!".format(version))
             new_task = task
     if not new_task:
-        logging.debug("Failed to find task for version {}".format(version))
+        logger.debug("Failed to find task for version {}".format(version))
     return new_task
+
 
 def print_file_chunk(url, offset, auth):
     """
@@ -39,29 +52,147 @@ def print_file_chunk(url, offset, auth):
     try:
         length = response.json()['offset'] - offset
     except ValueError:
-        logging.debug("Invalid JSON response received: {} from URL {}, skipping...".format(response, url))
+        logger.debug(
+            "Invalid JSON response received: "
+            f"{response} from URL {url}, skipping..."
+        )
         length = 0
     
     offset_params = OFFSET.format(offset, length)
-    response = requests.get(url+offset_params, auth=auth, verify=False)
+    response = requests.get(url + offset_params, auth=auth, verify=False)
     try:
         data = response.json()['data']
     except ValueError:
-        logging.debug("Invalid JSON response received: {} from URL {}, skipping...".format(response, url))
+        logger.debug(
+            "Invalid JSON response received: "
+            f"{response} from URL {url}, skipping..."
+        )
         data = ""
     
     if data != "":
         for line in data.split('\n')[:-1]:
-            logging.info("CONTAINER LOG: {}".format(line))
+            logger.info("CONTAINER LOG: {}".format(line))
 
     return offset + length
+
+
+def get_marathon_json():
+    """
+    Return the json configuration for the Mesos app.
+
+    Assumes a Jenkins job is providing the following vars:
+
+    VAR                    | example
+    :----                  | :--------
+    MARATHON_VARS_ONLY     | true (Jenkins is delivering vars, not json)
+    MARATHON_APP_ID        | "/complaint-search/search-tool-staging" 
+    MLT_ROOT               | "/home/dtwork/applications/similarity"
+    ATTACHMENTS_ROOT       | "/home/dtwork/"
+    DOCKER_USER            | (sensitive)
+    MESOS_MASTER_URLS      | (sensitive)
+    MESOS_AGENT_MAP        | (sensitive)
+    ES_USERNAME            | (sensitive)
+    ES_PASSWORD            | (sensitive)
+    LDAP_HOST              | (sensitive)
+    LDAP_USERNAME          | (sensitive)
+    LDAP_PASSWORD          | (sensitive)
+    LDAP_BASE_DN           | (sensitive)
+    PG_USERNAME            | (sensitive)
+    PG_PASSWORD            | (sensitive)
+    HOST_BULK              | (sensitive)
+    ES_SERVER_ENV          | staging
+    DJANGO_SETTINGS_MODULE | search_tool.mesos
+    ES_HOST                | (sensitive)
+    ES_INDEX_ATTACHMENT    | complaint-crdb-attachment-staging
+    ES_INDEX_COMPLAINT     | complaint-crdb-staging
+    """
+
+    ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
+    MLT_ROOT = os.getenv(
+        "MLT_ROOT",
+        f"{ATTACHMENTS_ROOT}/applications/similarity"
+    )
+
+    app_config = {
+        "id": MARATHON_APP_ID,
+        "container": {
+            "docker": {
+                "image": os.getenv("FQDI"),
+                "forcePullImage": True
+            },
+            "volumes": [
+                {
+                    "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
+                    "hostPath": "/home/dtwork/mosaic",
+                    "mode": "RO"
+                },
+                {
+                    "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
+                    "hostPath": "/home/dtwork/rightnow",
+                    "mode": "RO"
+                },
+                {
+                    "containerPath": "/etc/pki/ca-trust",
+                    "hostPath": "/etc/pki/ca-trust",
+                    "mode": "RO"
+                },
+                {
+                    "containerPath": MLT_ROOT,
+                    "hostPath": MLT_ROOT,
+                    "mode": "RO"
+                }
+            ],
+            "type": "MESOS"
+        },
+        "cmd": "/docker-entrypoint.sh",
+        "cpus": 2,
+        "mem": 8000,
+        "disk": 5000,
+        "instances": 2,
+        "uris": [],
+        "user": f'{os.getenv("DOCKER_USER")}',
+        "env": {
+            "ES_SERVER_ENV": os.getenv("ES_SERVER_ENV", "staging"),
+            "DJANGO_SETTINGS_MODULE": os.getenv(
+                "DJANGO_SETTINGS_MODULE", "search_tool.mesos"
+            ),
+            "ES_HOST": os.getenv("ES_HOST", ""),
+            "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
+            "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
+            "ES_USERNAME": os.getenv("ES_USERNAME"),
+            "ES_PASSWORD": os.getenv("ES_PASSWORD"),
+            "LDAP_HOST": os.getenv("LDAP_HOST"),
+            "LDAP_USERNAME": os.getenv("LDAP_USERNAME"),
+            "LDAP_PASSWORD": os.getenv("LDAP_PASSWORD"),
+            "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
+            "PGUSER": os.getenv("PG_USERNAME"),
+            "PGPASSWORD": os.getenv("PG_PASSWORD"),
+            "HOST_BULK": os.getenv("HOST_BULK"),
+        },
+        "healthChecks": [
+            {
+                "path": "/",
+                "protocol": "HTTP",
+                "portIndex": 0,
+                "gracePeriodSeconds": 600,
+                "intervalSeconds": 60,
+                "timeoutSeconds": 60,
+                "maxConsecutiveFailures": 3,
+                "ignoreHttp1xx": False
+            }
+        ]
+    }
+    return json.dumps(app_config, indent=2)
+
 
 if __name__ == '__main__':
     """
     This script reads in values from environment variables, then deploys a
-    Marathon application as defined in MARATHON_APP.
+    Marathon application as defined in get_marathon_json().
 
-    MARATHON_URLS:              One or more URL's to try when communication with
+    Vars used outside of the json config:
+
+    MARATHON_URLS:              One or more URLs to try when communication with
                                 Marathon, separated by commas.
     MARATHON_APP_ID:            The identifier of the application in Marathon.
     MARATHON_USER:              The user to use, if needed.
@@ -69,10 +200,10 @@ if __name__ == '__main__':
     MARATHON_FORCE_DEPLOY:      Use the Force, if necessary (i.e. when a
                                 deployment is failing.)
     MARATHON_FRAMEWORK_NAME:    The name of the framework (usually 'marathon')
-    MARATHON_APP:               The JSON formatted app definition.
+    MARATHON_APP:               The JSON app definition, used in legacy jobs
     MARATHON_RETRIES:           The number of task failures to tolerate.
-    MESOS_AGENT_MAP:            This is used when Mesos is behind a proxy.  The
-                                API will return the Mesos Agent IP address,
+    MESOS_AGENT_MAP:            This is used when Mesos is behind a proxy.
+                                The API will return the Mesos Agent IP address,
                                 but that may need to be mapped to a URL.  The
                                 map is defined like:
                                 10.0.1.34|https://mesos.test.dev,...
@@ -80,15 +211,32 @@ if __name__ == '__main__':
                                 separated by commas.
     """
 
-    marathon_urls = os.getenv("MARATHON_URLS", "http://localhost:8080").split(',')
-    marathon_app_id = os.getenv("MARATHON_APP_ID", "test-app")
+    marathon_app_id = MARATHON_APP_ID
+    marathon_urls = os.getenv(
+        "MARATHON_URLS", "http://localhost:8080").split(',')
     marathon_user = os.getenv("MARATHON_USER", None)
     marathon_password = os.getenv("MARATHON_PASSWORD", None)
-    marathon_force = True if os.getenv("MARATHON_FORCE_DEPLOY", "false") == "true" else False
+    marathon_force = True
     marathon_framework_name = os.getenv("MARATHON_FRAMEWORK_NAME", "marathon")
     marathon_retries = int(os.getenv("MARATHON_RETRIES", 3))
-    log_level = os.getenv("MARATHON_LOGLEVEL", 'info')
-    marathon_app = os.getenv("MARATHON_APP","""
+    if os.getenv("APP_STOP"):
+        # A simple request to stop the containers by 'scaling' to 0
+        marathon_app = """
+        {
+          "id": "f'{MARATHON_APP_ID}'",
+          "instances": 0,
+          "user": "root"
+        }
+        """
+    elif os.getenv("MARATHON_VARS_ONLY"):
+        # Jenkins is providing env vars only, not a full json structure
+        marathon_app = get_marathon_json()
+    elif os.getenv("MARATHON_APP"):
+        # A legacy Jenkins job is sending a full json structure via an env var
+        marathon_app = os.getenv("MARATHON_APP")
+    else:
+        # we fall back to a test json config
+        marathon_app = """  # noqa
         {
             "id": "/test-app",
             "cmd": "mv *.war apache-tomcat-*/webapps && cd apache-tomcat-* && sed \\"s/8080/$PORT/g\\" < ./conf/server.xml > ./conf/server-mesos.xml && sleep 15 && ./bin/catalina.sh run -config ./conf/server-mesos.xml",
@@ -112,34 +260,35 @@ if __name__ == '__main__':
                   "maxConsecutiveFailures": 3
                 }
             ]
-        }
-    """)
-    mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
-    mesos_master_urls = os.getenv("MESOS_MASTER_URLS", "http://localhost:5050").split(',')
+        }"""
+    print("marathon json config:")
+    pp.pprint(json.loads(marathon_app))
 
-    pp = pprint.PrettyPrinter(depth=2)
+    app_definition = MarathonApp.from_json(json.loads(marathon_app))
+
+    mesos_agent_map_string = os.getenv("MESOS_AGENT_MAP", None)
+    mesos_master_urls = os.getenv(
+        "MESOS_MASTER_URLS", "http://localhost:5050").split(',')
 
     exit_code = 0
     auth = None
     if marathon_user and marathon_password:
         auth = (marathon_user, marathon_password)
 
-    ### Setup Logging
-    logging.basicConfig(format="%(levelname)-8s %(message)s", level=getattr(logging, log_level.upper()))
-    logging.getLogger('marathon').setLevel(logging.WARN) # INFO is too chatty
-
-    logging.info("Parsing JSON app definition...")
-    app_definition = MarathonApp.from_json(json.loads(marathon_app))
-
     try:
-        logging.info("Connecting to Marathon...")
-        client = MarathonClient(marathon_urls, username=marathon_user, password=marathon_password, verify=False)
+        logger.info("Connecting to Marathon...")
+        client = MarathonClient(
+            marathon_urls,
+            username=marathon_user,
+            password=marathon_password,
+            verify=False
+        )
     except MarathonError as e:
-        logging.error("Failed to connect to Marathon! {}".format(e))
+        logger.error("Failed to connect to Marathon! {}".format(e))
         exit_code = 1
         sys.exit(exit_code)
 
-    logging.info("Deploying application...")
+    logger.info("Deploying application...")
     try:
         app = client.get_app(marathon_app_id)
     except MarathonHttpError:
@@ -147,63 +296,90 @@ if __name__ == '__main__':
         version = response.version
         depolyment_id = response.deployments[0].id
     else:
-        response = client.update_app(marathon_app_id, app_definition, force=marathon_force)
+        response = client.update_app(
+            marathon_app_id,
+            app_definition,
+            force=marathon_force
+        )
         version = response['version']
         deployment_id = response['deploymentId']
 
-    logging.info("New version deployed: {}".format(version))
+    logger.info("New version deployed: {}".format(version))
 
     if app_definition.instances == 0:
-        logging.info("Deactivated application by setting instances to 0, deployment complete.")
+        logger.info(
+            "Deactivated application by setting instances "
+            "to 0, deployment complete."
+        )
         exit_code = 0
         sys.exit(exit_code)
 
-    ### Get newly created Mesos task
+    # Get newly created Mesos task
 
     time.sleep(5)
     new_task = get_task_by_version(client, marathon_app_id, version)
 
     if not new_task:
-        logging.warn("New task did not start automatically, probably because the application definition did not change, forcing restart...")
+        logger.warning(
+            "New task did not start automatically, probably because "
+            "the application definition did not change, forcing restart..."
+        )
         response = None
         for hostname in marathon_urls:
             try:
                 headers = {"content-type": "application/json"}
                 force_string = "true" if marathon_force else "false"
-                response = requests.post("{}/v2/apps/{}/restart?force={}".format(
-                    hostname, marathon_app_id, force_string), auth=auth, verify=False,
-                    headers=headers)
+                _url = "{}/v2/apps/{}/restart?force={}".format(
+                    hostname, marathon_app_id, force_string
+                ) 
+                response = requests.post(
+                    _url,
+                    auth=auth,
+                    verify=False,
+                    headers=headers
+                )
             except requests.exceptions.ConnectionError as e:
-                logging.warn("Marathon connection error, ignoring: {}".format(e))
+                logger.warning(
+                    "Marathon connection error, ignoring: {}".format(e))
                 pass
             else:
                 break
 
         if response.status_code != 200:
-            logging.error("Failed to force application restart, received response {}, exiting...".format(response.text))
+            logger.error(
+                "Failed to force application restart, "
+                "received response {}, exiting...".format(response.text)
+            )
             exit_code = 1
             sys.exit(exit_code)
 
         attempts = 0
         while not new_task and attempts < 10:
             time.sleep(2)
-            new_task = get_task_by_version(client, marathon_app_id, response.json()["version"])
+            new_task = get_task_by_version(
+                client, marathon_app_id, response.json()["version"]
+            )
             attempts += 1
 
         if not new_task:
-            logging.error("Unable to retrieve new task from Marathon, there may be a communication failure with Mesos.")
+            logger.error(
+                "Unable to retrieve new task from Marathon, "
+                "there may be a communication failure with Mesos."
+            )
             exit_code = 1
             sys.exit(exit_code)
 
         deployment_id = response.json()["deploymentId"]
-        logging.info("New version created by restart: {}".format(response.json()["version"]))
+        logger.info(
+            f"New version created by restart: {response.json()['version']}"
+        )
 
-    ### Get Framework ID
+    # Get Framework ID
 
     marathon_info = client.get_info()
     framework_id = marathon_info.framework_id
 
-    ### Query Mesos API to discover Container ID
+    # Query Mesos API to discover Container ID
     agent_hostname = new_task.host
     mesos_agent_map = {}
     if mesos_agent_map_string:
@@ -214,9 +390,14 @@ if __name__ == '__main__':
     else:
         agent_hostname = "http://{}:5051".format(agent_hostname)
 
-    logging.info('SSH command: ssh -t {ip} "cd /opt/mesos/slaves/*/frameworks/*/executors/{run}/runs/latest; exec \\$SHELL -l"'.format(ip=new_task.host, ex=new_task.app_id, run=new_task.id))
+    logger.info(
+        f'SSH command: ssh -t {new_task.host} '
+        f'"cd /opt/mesos/slaves/*/frameworks/*/executors/{new_task.id}/runs/latest; exec \\$SHELL -l"'  # noqa
+    )
 
-    mesos_tasks = requests.get("{}/state.json".format(agent_hostname), auth=auth, verify=False)
+    mesos_tasks = requests.get(
+        "{}/state.json".format(agent_hostname), auth=auth, verify=False
+    )
     marathon_framework = None
     container_id = None
 
@@ -224,8 +405,10 @@ if __name__ == '__main__':
     try:
         mesos_tasks = mesos_tasks.json()
     except ValueError as e:
-        logging.error("Error {} from response {}".format(e, mesos_tasks.text))
-        logging.error("Deployment may have started, but cannot confirm with Mesos.")
+        logger.error("Error {} from response {}".format(e, mesos_tasks.text))
+        logger.error(
+            "Deployment may have started, but cannot confirm with Mesos."
+        )
         exit_code = 1
         sys.exit(exit_code)
 
@@ -235,7 +418,7 @@ if __name__ == '__main__':
             break
 
     if not marathon_framework:
-        logging.error("Marathon Framework not discoverable via Mesos API.")
+        logger.error("Marathon Framework not discoverable via Mesos API.")
 
     for executor in framework['executors']:
         if executor['source'] == new_task.id:
@@ -243,10 +426,10 @@ if __name__ == '__main__':
             break
 
     if not container_id:
-        logging.error("Executor for task {} not found.".format(new_task.id))
+        logger.error("Executor for task {} not found.".format(new_task.id))
 
-    ### Stream STDOUT and STDERR from Mesos until the deployment has completed
-    logging.info("Streaming logs from Mesos...\n")
+    # Stream STDOUT and STDERR from Mesos until the deployment has completed
+    logger.info("Streaming logs from Mesos...\n")
 
     attempts = 0
 
@@ -263,57 +446,92 @@ if __name__ == '__main__':
             deployments = client.get_app(marathon_app_id).deployments
 
             if deployments == []:
-                logging.debug("No deployments remaining, set done=True.")
+                logger.debug("No deployments remaining, set done=True.")
                 time.sleep(3)
                 done = True
             else:
                 mesos_tasks = None
-                logging.debug("Getting Mesos task state...")
+                logger.debug("Getting Mesos task state...")
 
                 for host in mesos_master_urls:
-                    logging.debug("Trying Mesos host {}...".format(host))
+                    logger.debug("Trying Mesos host {}...".format(host))
                     try:
-                        response = requests.get(TASK_STATUS_URL.format(host), auth=auth, verify=False, timeout=1)
+                        response = requests.get(
+                            TASK_STATUS_URL.format(host),
+                            auth=auth,
+                            verify=False,
+                            timeout=1
+                        )
                     except requests.exceptions.ConnectionError:
-                        logging.debug("Failed to connect to Mesos host {}, trying next host...".format(host))
+                        logger.debug(
+                            f"Failed to connect to Mesos host {host}, "
+                            "trying next host..."
+                        )
                         continue
                     except requests.exceptions.ReadTimeout:
-                        logging.debug("Read timeout from Mesos host {}, trying next host...".format(host))
+                        logger.debug(
+                            f"Read timeout from Mesos host {host}, "
+                            "trying next host..."
+                        )
                         continue
 
                     if response.status_code == 200:
                         mesos_tasks = response.json()
                         break
                     else:
-                        logging.warn("Response code != 200: {}".format(pp.pprint(response)))
+                        logger.warning(
+                            "Response code != 200: {}".format(
+                                pp.pprint(response))
+                        )
 
                 if mesos_tasks:
                     for task in mesos_tasks['tasks']:
-                        #print task
+                        #  print task
                         if task['id'] == new_task.id:
-                            if task['state'] in ["TASK_FAILED", "TASK_KILLED", "TASK_FINISHED"]:
-                                logging.warn("task failed: {}".format(pp.pprint(task)))
+                            if task['state'] in [
+                                "TASK_FAILED",
+                                "TASK_KILLED",
+                                "TASK_FINISHED"
+                            ]:
+                                logger.warning(
+                                    "task failed: {}".format(pp.pprint(task))
+                                )
                                 failed = True
                                 done = True
 
                 else:
-                    logging.warn("Failed to connect to Mesos API, task status not available.")
+                    logger.warning(
+                        "Failed to connect to Mesos API, "
+                        "task status not available."
+                    )
 
-            ### Get STDOUT
+            # Get STDOUT
 
-            stderr_url = STDERR_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
+            stderr_url = STDERR_URL.format(
+                agent_hostname,
+                new_task.slave_id,
+                framework_id,
+                new_task.id,
+                container_id
+            )
             stderr_offset = print_file_chunk(stderr_url, stderr_offset, auth)
 
-            ### Get STDERR
+            # Get STDERR
 
-            stdout_url = STDOUT_URL.format(agent_hostname, new_task.slave_id, framework_id, new_task.id, container_id)
+            stdout_url = STDOUT_URL.format(
+                agent_hostname,
+                new_task.slave_id,
+                framework_id,
+                new_task.id,
+                container_id
+            )
             stdout_offset = print_file_chunk(stdout_url, stdout_offset, auth)
 
             # Small rate limiting factor
             time.sleep(0.1)
 
         if failed:
-            logging.warn("Deployment task failed, trying again...")
+            logger.warning("Deployment task failed, trying again...")
             attempts += 1
         else:
             break
@@ -323,29 +541,38 @@ if __name__ == '__main__':
     # Wait for logs to print
     time.sleep(5)
 
-    logging.info("End of log stream from Mesos.")
+    logger.info("End of log stream from Mesos.")
 
     if failed:
-        logging.error("Failure deploying new app configuration, aborting deployment!")
-
+        logger.error(
+            "Failure deploying new app configuration, aborting deployment!"
+        )
         for hostname in marathon_urls:
             try:
                 headers = {"content-type": "application/json"}
-                response = requests.delete("{}/v2/deployments/{}?force=true".format(
-                    hostname, deployment_id), auth=auth, verify=False,
-                    headers=headers)
+                response = requests.delete(
+                    f"{hostname}/v2/deployments/{deployment_id}?force=true",
+                    auth=auth,
+                    verify=False,
+                    headers=headers
+                )
             except requests.exceptions.ConnectionError as e:
-                logging.warn("Marathon connection error, ignoring: {}".format(e))
+                logger.warn(
+                    "Marathon connection error, ignoring: {}".format(e))
                 pass
             else:
                 break
 
         if response.status_code in [200, 202]:
-            logging.warn("Successfully cancelled failed deployment.")
+            logger.warn("Successfully cancelled failed deployment.")
         else:
-            logging.error("Failed to force stop deployment: {}, you may need to try again with MARATHON_FORCE_DEPLOY=true, exiting...".format(response.text))
+            logger.error(
+                f"Failed to force stop deployment: {response.text}, "
+                "you may need to try again with MARATHON_FORCE_DEPLOY=true, "
+                "exiting..."
+            )
 
         exit_code = 1
     else:
-        logging.info("All deployments completed sucessfully!")
+        logger.info("All deployments completed sucessfully!")
     sys.exit(exit_code)
