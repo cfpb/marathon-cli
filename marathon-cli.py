@@ -52,7 +52,7 @@ def print_file_chunk(url, offset, auth):
     
     if data != "":
         for line in data.split('\n')[:-1]:
-            logging.info("CONTAINER LOG: {}".format(line))
+            logging.info("CONTAINER LOG: {}".format(line.encode('ascii', 'ignore')))
 
     return offset + length
 
