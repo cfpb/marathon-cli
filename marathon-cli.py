@@ -86,7 +86,7 @@ def get_marathon_json():
     :----                  | :--------
     MARATHON_VARS_ONLY     | true (Jenkins is delivering vars, not json)
     MARATHON_APP_ID        | "/complaint-search/search-tool-staging" 
-    MLT_ROOT               | "/home/dtwork/applications/similarity"
+    MLT_ROOT               | "/home/dtwork/applications/similarity" DEPRECATED
     ATTACHMENTS_ROOT       | "/home/dtwork/"
     DOCKER_USER            | (sensitive)
     MESOS_MASTER_URLS      | (sensitive)
@@ -108,10 +108,10 @@ def get_marathon_json():
     """
 
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
-    MLT_ROOT = os.getenv(
-        "MLT_ROOT",
-        f"{ATTACHMENTS_ROOT}/applications/similarity"
-    )
+    # MLT_ROOT = os.getenv(
+    #     "MLT_ROOT",
+    #     f"{ATTACHMENTS_ROOT}/applications/similarity"
+    # )
 
     app_config = {
         "id": MARATHON_APP_ID,
@@ -134,11 +134,6 @@ def get_marathon_json():
                 {
                     "containerPath": "/etc/pki/ca-trust",
                     "hostPath": "/etc/pki/ca-trust",
-                    "mode": "RO"
-                },
-                {
-                    "containerPath": MLT_ROOT,
-                    "hostPath": MLT_ROOT,
                     "mode": "RO"
                 }
             ],
