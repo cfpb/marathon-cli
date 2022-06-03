@@ -23,7 +23,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-pp = pprint.PrettyPrinter(indent=2, width=120, depth=6)
+pp = pprint.PrettyPrinter(indent=2, width=135, depth=6)
 
 
 def get_task_by_version(client, app_id, version):
@@ -86,8 +86,8 @@ def get_marathon_json():
     :----                  | :--------
     MARATHON_VARS_ONLY     | true (Jenkins is delivering vars, not json)
     MARATHON_APP_ID        | "/complaint-search/search-tool-staging" 
-    MLT_ROOT               | "/home/dtwork/applications/similarity" DEPRECATED
     ATTACHMENTS_ROOT       | "/home/dtwork/"
+    MLT_ROOT               | "/home/dtwork/applications/similarity"
     DOCKER_USER            | (sensitive)
     MESOS_MASTER_URLS      | (sensitive)
     MESOS_AGENT_MAP        | (sensitive)
@@ -108,10 +108,36 @@ def get_marathon_json():
     """
 
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
-    # MLT_ROOT = os.getenv(
-    #     "MLT_ROOT",
-    #     f"{ATTACHMENTS_ROOT}/applications/similarity"
-    # )
+    MLT_ROOT = os.getenv("MLT_ROOT")
+    # build list of mounted volumes
+    volumes = [
+        {
+            "containerPath": "/etc/pki/ca-trust",
+            "hostPath": "/etc/pki/ca-trust",
+            "mode": "RO"
+        }
+    ]
+    if ATTACHMENTS_ROOT:
+        volumes += [
+            {
+                "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
+                "hostPath": "/home/dtwork/mosaic",
+                "mode": "RO"
+            },
+            {
+                "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
+                "hostPath": "/home/dtwork/rightnow",
+                "mode": "RO"
+            }
+        ]
+    if MLT_ROOT:
+        volumes.append(
+            {
+                "containerPath": MLT_ROOT,
+                "hostPath": MLT_ROOT,
+                "mode": "RO"
+            }
+        )
 
     app_config = {
         "id": MARATHON_APP_ID,
@@ -120,23 +146,7 @@ def get_marathon_json():
                 "image": os.getenv("FQDI"),
                 "forcePullImage": True
             },
-            "volumes": [
-                {
-                    "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
-                    "hostPath": "/home/dtwork/mosaic",
-                    "mode": "RO"
-                },
-                {
-                    "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
-                    "hostPath": "/home/dtwork/rightnow",
-                    "mode": "RO"
-                },
-                {
-                    "containerPath": "/etc/pki/ca-trust",
-                    "hostPath": "/etc/pki/ca-trust",
-                    "mode": "RO"
-                }
-            ],
+            "volumes": volumes,
             "type": "MESOS"
         },
         "cmd": "/docker-entrypoint.sh",
