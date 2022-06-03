@@ -23,7 +23,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-pp = pprint.PrettyPrinter(indent=2, width=120, depth=6)
+pp = pprint.PrettyPrinter(indent=2, width=135, depth=6)
 
 
 def get_task_by_version(client, app_id, version):
