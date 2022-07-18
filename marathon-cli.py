@@ -80,7 +80,7 @@ def get_marathon_json():
     """
     Return the json configuration for the Mesos app.
 
-    Assumes a Jenkins job is providing the following vars:
+    Assumes a Jenkins job is providing some of the following vars:
 
     VAR                    | example
     :----                  | :--------
@@ -100,15 +100,21 @@ def get_marathon_json():
     PG_USERNAME            | (sensitive)
     PG_PASSWORD            | (sensitive)
     HOST_BULK              | (sensitive)
+    BALE_HOSTPATH          | (sensitive)
+    BALE_DIR               | /var/lib/forge
     ES_SERVER_ENV          | staging
     DJANGO_SETTINGS_MODULE | search_tool.mesos
     ES_HOST                | (sensitive)
     ES_INDEX_ATTACHMENT    | complaint-crdb-attachment-staging
     ES_INDEX_COMPLAINT     | complaint-crdb-staging
+
     """
 
     ATTACHMENTS_ROOT = os.getenv("ATTACHMENTS_ROOT")
     MLT_ROOT = os.getenv("MLT_ROOT")
+    BALE_DIR = os.getenv("BALE_DIR")
+    BALE_HOSTPATH = os.getenv("BALE_HOSTPATH")
+
     # build list of mounted volumes
     volumes = [
         {
@@ -136,6 +142,14 @@ def get_marathon_json():
                 "containerPath": MLT_ROOT,
                 "hostPath": MLT_ROOT,
                 "mode": "RO"
+            }
+        )
+    if BALE_DIR and BALE_HOSTPATH:
+        volumes.append(
+            {
+                "containerPath": BALE_DIR,
+                "hostPath": BALE_HOSTPATH,
+                "mode": "RW"
             }
         )
 
