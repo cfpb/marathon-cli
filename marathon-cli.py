@@ -23,7 +23,7 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 logger.addHandler(ch)
 
-pp = pprint.PrettyPrinter(indent=2, width=135, depth=6)
+pp = pprint.PrettyPrinter(indent=2, width=155, depth=6)
 
 
 def get_task_by_version(client, app_id, version):
@@ -186,7 +186,7 @@ def get_marathon_json():
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
             "PGUSER": os.getenv("PG_USERNAME"),
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
-            "HOST_BULK": os.getenv("HOST_BULK"),
+            "HOST_BULK": os.getenv("HOST_BULK", ""),
         },
         "healthChecks": [
             {
@@ -201,6 +201,11 @@ def get_marathon_json():
             }
         ]
     }
+    if BALE_DIR:  # deploying the bulk app
+        app_config["env"].update({
+            "BALE_DIR": BALE_DIR,
+            "ATTACHMENTS_ROOT": ATTACHMENTS_ROOT,
+        })
     return json.dumps(app_config, indent=2)
 
 
