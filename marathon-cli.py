@@ -97,6 +97,8 @@ def get_marathon_json():
     LDAP_USERNAME          | (sensitive)
     LDAP_PASSWORD          | (sensitive)
     LDAP_BASE_DN           | (sensitive)
+    PG_HOST                | (sensitive, used for bulk)
+    PG_DATABASE            | (sensitive, used for bulk)
     PG_USERNAME            | (sensitive)
     PG_PASSWORD            | (sensitive)
     HOST_BULK              | (sensitive)
@@ -184,6 +186,9 @@ def get_marathon_json():
             "LDAP_USERNAME": os.getenv("LDAP_USERNAME"),
             "LDAP_PASSWORD": os.getenv("LDAP_PASSWORD"),
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
+            "PG_HOST": os.getenv("PG_HOST"),
+            "PG_DATABASE": os.getenv("PG_DATABASE"),
+            "PG_USERNAME": os.getenv("PG_USERNAME"),
             "PGUSER": os.getenv("PG_USERNAME"),
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
             "HOST_BULK": os.getenv("HOST_BULK", ""),
