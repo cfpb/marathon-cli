@@ -186,8 +186,6 @@ def get_marathon_json():
             "LDAP_USERNAME": os.getenv("LDAP_USERNAME"),
             "LDAP_PASSWORD": os.getenv("LDAP_PASSWORD"),
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
-            "PG_HOST": os.getenv("PG_HOST"),
-            "PG_DATABASE": os.getenv("PG_DATABASE"),
             "PG_USERNAME": os.getenv("PG_USERNAME"),
             "PGUSER": os.getenv("PG_USERNAME"),
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
@@ -210,6 +208,8 @@ def get_marathon_json():
         app_config["env"].update({
             "BALE_DIR": BALE_DIR,
             "ATTACHMENTS_ROOT": ATTACHMENTS_ROOT,
+            "PG_HOST": os.getenv("PG_HOST"),
+            "PG_DATABASE": os.getenv("PG_DATABASE"),
         })
     return json.dumps(app_config, indent=2)
 
