@@ -128,12 +128,12 @@ def get_marathon_json():
     if ATTACHMENTS_ROOT:
         volumes += [
             {
-                "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
+                "containerPath": f"{ATTACHMENTS_ROOT}/attachments/mosaic",
                 "hostPath": "/home/dtwork/mosaic",
                 "mode": "RO"
             },
             {
-                "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
+                "containerPath": f"{ATTACHMENTS_ROOT}/attachments/rightnow",
                 "hostPath": "/home/dtwork/rightnow",
                 "mode": "RO"
             }
@@ -204,13 +204,25 @@ def get_marathon_json():
             }
         ]
     }
-    if BALE_DIR:  # deploying the bulk app
+    if BALE_DIR:  # deploying the explorer-bulk app
         app_config["env"].update({
             "BALE_DIR": BALE_DIR,
             "ATTACHMENTS_ROOT": ATTACHMENTS_ROOT,
             "PG_HOST": os.getenv("PG_HOST"),
             "PG_DATABASE": os.getenv("PG_DATABASE"),
         })
+        app_config["healthChecks"] = [
+            {
+                "path": "/ops/health",
+                "protocol": "HTTP",
+                "portIndex": 0,
+                "gracePeriodSeconds": 2400,
+                "intervalSeconds": 60,
+                "timeoutSeconds": 60,
+                "maxConsecutiveFailures": 3,
+                "ignoreHttp1xx": False
+            }
+        ]
     return json.dumps(app_config, indent=2)
 
 
