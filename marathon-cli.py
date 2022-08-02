@@ -128,12 +128,12 @@ def get_marathon_json():
     if ATTACHMENTS_ROOT:
         volumes += [
             {
-                "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
+                "containerPath": f"{ATTACHMENTS_ROOT}/attachments/mosaic",
                 "hostPath": "/home/dtwork/mosaic",
                 "mode": "RO"
             },
             {
-                "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
+                "containerPath": f"{ATTACHMENTS_ROOT}/attachments/rightnow",
                 "hostPath": "/home/dtwork/rightnow",
                 "mode": "RO"
             }
