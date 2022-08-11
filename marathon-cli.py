@@ -151,7 +151,7 @@ def get_marathon_json():
                 "mode": "RO"
             }
         ]
-            if MLT_ROOT:
+    if MLT_ROOT:
         volumes.append(
             {
                 "containerPath": MLT_ROOT,
