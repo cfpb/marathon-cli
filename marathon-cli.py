@@ -125,7 +125,7 @@ def get_marathon_json():
             "mode": "RO"
         }
     ]
-    if ATTACHMENTS_ROOT:
+    if BALE_DIR:  # deploying the bulk app
         volumes += [
             {
                 "containerPath": f"{ATTACHMENTS_ROOT}/attachments/mosaic",
@@ -134,6 +134,19 @@ def get_marathon_json():
             },
             {
                 "containerPath": f"{ATTACHMENTS_ROOT}/attachments/rightnow",
+                "hostPath": "/home/dtwork/rightnow",
+                "mode": "RO"
+            }
+        ]
+    else:
+        volumes += [
+            {
+                "containerPath": f"{ATTACHMENTS_ROOT}/mosaic",
+                "hostPath": "/home/dtwork/mosaic",
+                "mode": "RO"
+            },
+            {
+                "containerPath": f"{ATTACHMENTS_ROOT}/rightnow",
                 "hostPath": "/home/dtwork/rightnow",
                 "mode": "RO"
             }
