@@ -16,6 +16,7 @@ STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executo
 STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"  # noqa
 OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
+NEW_RELIC_CONFIG_FILE = os.getenv("NEW_RELIC_CONFIG_FILE")
 
 logger = logging.getLogger('marathon-cli')
 logger.setLevel(logging.INFO)
@@ -57,7 +58,7 @@ def print_file_chunk(url, offset, auth):
             f"{response} from URL {url}, skipping..."
         )
         length = 0
-    
+
     offset_params = OFFSET.format(offset, length)
     response = requests.get(url + offset_params, auth=auth, verify=False)
     try:
@@ -68,7 +69,7 @@ def print_file_chunk(url, offset, auth):
             f"{response} from URL {url}, skipping..."
         )
         data = ""
-    
+
     if data != "":
         for line in data.split('\n')[:-1]:
             logger.info("CONTAINER LOG: {}".format(line))
@@ -85,7 +86,7 @@ def get_marathon_json():
     VAR                    | example
     :----                  | :--------
     MARATHON_VARS_ONLY     | true (Jenkins is delivering vars, not json)
-    MARATHON_APP_ID        | "/complaint-search/search-tool-staging" 
+    MARATHON_APP_ID        | "/complaint-search/search-tool-staging"
     ATTACHMENTS_ROOT       | "/home/dtwork/"
     MLT_ROOT               | "/home/dtwork/applications/similarity"
     DOCKER_USER            | (sensitive)
@@ -97,6 +98,7 @@ def get_marathon_json():
     LDAP_USERNAME          | (sensitive)
     LDAP_PASSWORD          | (sensitive)
     LDAP_BASE_DN           | (sensitive)
+    NEW_RELIC_CONFIG_FILE  | (sensitive)
     PG_HOST                | (sensitive, used for bulk)
     PG_DATABASE            | (sensitive, used for bulk)
     PG_USERNAME            | (sensitive)
@@ -106,7 +108,10 @@ def get_marathon_json():
     BALE_DIR               | /var/lib/forge
     ES_SERVER_ENV          | staging
     DJANGO_SETTINGS_MODULE | search_tool.mesos
+    ES_SCHEME              | https
     ES_HOST                | (sensitive)
+    ES_PORT                | 443
+    ES_VERIFY_CERTS        | true
     ES_INDEX_ATTACHMENT    | complaint-crdb-attachment-staging
     ES_INDEX_COMPLAINT     | complaint-crdb-staging
 
@@ -167,6 +172,17 @@ def get_marathon_json():
                 "mode": "RW"
             }
         )
+    if NEW_RELIC_CONFIG_FILE:
+        # NEW_RELIC_CONFIG_FILE should point to the newrelic.ini
+        # file on the host, not the container. We set a fixed path
+        # within the container for newrelic.ini
+        volumes.append(
+            {
+                "containerPath": "/var/run/secrets/newrelic.ini",
+                "hostPath": NEW_RELIC_CONFIG_FILE,
+                "mode": "RO"
+            }
+        )
 
     app_config = {
         "id": MARATHON_APP_ID,
@@ -190,7 +206,10 @@ def get_marathon_json():
             "DJANGO_SETTINGS_MODULE": os.getenv(
                 "DJANGO_SETTINGS_MODULE", "search_tool.mesos"
             ),
+            "ES_SCHEME": os.getenv("ES_SCHEME", "https"),
             "ES_HOST": os.getenv("ES_HOST", ""),
+            "ES_PORT": os.getenv("ES_PORT", "443"),
+            "ES_VERIFY_CERTS": os.getenv("ES_VERIFY_CERTS", "true"),
             "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
             "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
             "ES_USERNAME": os.getenv("ES_USERNAME"),
@@ -199,6 +218,9 @@ def get_marathon_json():
             "LDAP_USERNAME": os.getenv("LDAP_USERNAME"),
             "LDAP_PASSWORD": os.getenv("LDAP_PASSWORD"),
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
+            # Set container env var with fixed newrelic.ini path if used
+            "NEW_RELIC_CONFIG_FILE": "/var/run/secrets/newrelic.ini"
+            if NEW_RELIC_CONFIG_FILE else "",
             "PG_USERNAME": os.getenv("PG_USERNAME"),
             "PGUSER": os.getenv("PG_USERNAME"),
             "PGPASSWORD": os.getenv("PG_PASSWORD"),
@@ -385,7 +407,7 @@ if __name__ == '__main__':
                 force_string = "true" if marathon_force else "false"
                 _url = "{}/v2/apps/{}/restart?force={}".format(
                     hostname, marathon_app_id, force_string
-                ) 
+                )
                 response = requests.post(
                     _url,
                     auth=auth,
