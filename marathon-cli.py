@@ -213,6 +213,7 @@ def get_marathon_json():
             "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
             "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
             "ES_INDEX_SUFFIX": os.getenv("ES_INDEX_SUFFIX", "prod"),
+            "ENABLE_ES_LOGGING": os.getenv("ENABLE_ES_LOGGING", "true"),
             "ES_USERNAME": os.getenv("ES_USERNAME"),
             "ES_PASSWORD": os.getenv("ES_PASSWORD"),
             "LDAP_HOST": os.getenv("LDAP_HOST"),
