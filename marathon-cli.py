@@ -202,7 +202,7 @@ def get_marathon_json():
         "uris": [],
         "user": f'{os.getenv("DOCKER_USER")}',
         "env": {
-            "ES_SERVER_ENV": os.getenv("ES_SERVER_ENV", "staging"),
+            "ES_SERVER_ENV": os.getenv("ES_INDEX_SUFFIX", "prod"),
             "DJANGO_SETTINGS_MODULE": os.getenv(
                 "DJANGO_SETTINGS_MODULE", "search_tool.mesos"
             ),
@@ -212,6 +212,7 @@ def get_marathon_json():
             "ES_VERIFY_CERTS": os.getenv("ES_VERIFY_CERTS", "true"),
             "ES_INDEX_ATTACHMENT": os.getenv("ES_INDEX_ATTACHMENT"),
             "ES_INDEX_COMPLAINT": os.getenv("ES_INDEX_COMPLAINT"),
+            "ES_INDEX_SUFFIX": os.getenv("ES_INDEX_SUFFIX", "prod"),
             "ES_USERNAME": os.getenv("ES_USERNAME"),
             "ES_PASSWORD": os.getenv("ES_PASSWORD"),
             "LDAP_HOST": os.getenv("LDAP_HOST"),
