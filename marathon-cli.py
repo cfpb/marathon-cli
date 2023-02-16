@@ -99,10 +99,10 @@ def get_marathon_json():
     LDAP_PASSWORD          | (sensitive)
     LDAP_BASE_DN           | (sensitive)
     NEW_RELIC_CONFIG_FILE  | (sensitive)
-    PG_HOST                | (sensitive, used for bulk)
-    PG_DATABASE            | (sensitive, used for bulk)
-    PG_USERNAME            | (sensitive)
-    PG_PASSWORD            | (sensitive)
+    PGHOST                 | (sensitive, used for bulk)
+    PGDATABASE             | (sensitive, used for bulk)
+    PGUSER                 | (sensitive)
+    PGPASSWORD             | (sensitive)
     HOST_BULK              | (sensitive)
     BALE_HOSTPATH          | (sensitive)
     BALE_DIR               | /var/lib/forge
@@ -223,9 +223,8 @@ def get_marathon_json():
             # Set container env var with fixed newrelic.ini path if used
             "NEW_RELIC_CONFIG_FILE": "/var/run/secrets/newrelic.ini"
             if NEW_RELIC_CONFIG_FILE else "",
-            "PG_USERNAME": os.getenv("PG_USERNAME"),
-            "PGUSER": os.getenv("PG_USERNAME"),
-            "PGPASSWORD": os.getenv("PG_PASSWORD"),
+            "PGUSER": os.getenv("PGUSER"),
+            "PGPASSWORD": os.getenv("PGPASSWORD"),
             "HOST_BULK": os.getenv("HOST_BULK", ""),
         },
         "healthChecks": [
@@ -245,8 +244,8 @@ def get_marathon_json():
         app_config["env"].update({
             "BALE_DIR": BALE_DIR,
             "ATTACHMENTS_ROOT": ATTACHMENTS_ROOT,
-            "PG_HOST": os.getenv("PG_HOST"),
-            "PG_DATABASE": os.getenv("PG_DATABASE"),
+            "PGHOST": os.getenv("PGHOST"),
+            "PGDATABASE": os.getenv("PGDATABASE"),
         })
         app_config["healthChecks"] = [
             {
