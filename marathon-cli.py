@@ -16,7 +16,7 @@ STDOUT_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executo
 STDERR_URL = "{}/files/read.json?path=/opt/mesos/slaves/{}/frameworks/{}/executors/{}/runs/{}/stderr"  # noqa
 OFFSET = "&offset={}&length={}"
 MARATHON_APP_ID = os.getenv("MARATHON_APP_ID", "test-app")
-NEW_RELIC_CONFIG_FILE = os.getenv("NEW_RELIC_CONFIG_FILE")
+# NEW_RELIC_CONFIG_FILE = os.getenv("NEW_RELIC_CONFIG_FILE")
 
 logger = logging.getLogger('marathon-cli')
 logger.setLevel(logging.INFO)
@@ -172,17 +172,17 @@ def get_marathon_json():
                 "mode": "RW"
             }
         )
-    if NEW_RELIC_CONFIG_FILE:
-        # NEW_RELIC_CONFIG_FILE should point to the newrelic.ini
-        # file on the host, not the container. We set a fixed path
-        # within the container for newrelic.ini
-        volumes.append(
-            {
-                "containerPath": "/var/run/secrets/newrelic.ini",
-                "hostPath": NEW_RELIC_CONFIG_FILE,
-                "mode": "RO"
-            }
-        )
+    # if NEW_RELIC_CONFIG_FILE:
+    #     # NEW_RELIC_CONFIG_FILE should point to the newrelic.ini
+    #     # file on the host, not the container. We set a fixed path
+    #     # within the container for newrelic.ini
+    #     volumes.append(
+    #         {
+    #             "containerPath": "/var/run/secrets/newrelic.ini",
+    #             "hostPath": NEW_RELIC_CONFIG_FILE,
+    #             "mode": "RO"
+    #         }
+    #     )
 
     app_config = {
         "id": MARATHON_APP_ID,
@@ -221,8 +221,8 @@ def get_marathon_json():
             "LDAP_PASSWORD": os.getenv("LDAP_PASSWORD"),
             "LDAP_BASE_DN": os.getenv("LDAP_BASE_DN"),
             # Set container env var with fixed newrelic.ini path if used
-            "NEW_RELIC_CONFIG_FILE": "/var/run/secrets/newrelic.ini"
-            if NEW_RELIC_CONFIG_FILE else "",
+            # "NEW_RELIC_CONFIG_FILE": "/var/run/secrets/newrelic.ini"
+            # if NEW_RELIC_CONFIG_FILE else "",
             "PGUSER": os.getenv("PGUSER"),
             "PGPASSWORD": os.getenv("PGPASSWORD"),
             "HOST_BULK": os.getenv("HOST_BULK", ""),
