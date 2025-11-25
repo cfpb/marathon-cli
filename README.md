@@ -1,6 +1,8 @@
 # marathon-cli
 Command line tool for deploying applications via Marathon
 
+This project is archived and no longer maintained.
+
 ## Branch usage
 As of Summer 2022
 - `master` – The default branch, used by about a dozen jobs
